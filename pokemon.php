@@ -1,27 +1,55 @@
 <?php
+include 'buscarPokemon.php';
 $pokemons = json_decode(file_get_contents("http://canalti.com.br/api/pokemons.json"));
-$pokemonCount = count($pokemons->pokemon);
-$evolutionCount = 0;
+$pokemonsBd = array();
 
+$buscador = new Buscador();
+
+$pokemonsBD = $buscador->buscarDadosPoke();
+$pokemon = array();
+foreach ($pokemonsBD as $poke) {
+    
+    array_push($pokemonsBd, $poke);
+}
+
+
+
+
+$pokemonCount = count($pokemonsBd);
+$pokemonCount += count($pokemons->pokemon);
+$evolutionCount = 0;
 // Verifica se houve uma submissão de pesquisa
 $searchResults = [];
+$searchResultsApi = [];
 $suggestions = [];
 
 if (isset($_GET['search'])) {
     $searchTerm = $_GET['search'];
-    foreach ($pokemons->pokemon as $pokemon) {
+    foreach ($pokemonsBD as $pokemon) {
         // Verifica se o nome do Pokémon contém o termo de pesquisa
-        if (stripos($pokemon->name, $searchTerm) !== false) {
+        if (stripos($pokemon['nome'], $searchTerm) !== false) {
             $searchResults[] = $pokemon;
         }
         // Cria sugestões com base no nome do Pokémon
-        if (stripos($pokemon->name, $searchTerm) !== false) {
-            $suggestions[] = $pokemon->name;
+        if (stripos($pokemon['nome'], $searchTerm) !== false) {
+            $suggestions[] = $pokemon['nome'];
+        }
+    }
+    foreach ($pokemons->pokemon as $obj) {
+        // Verifica se o nome do Pokémon contém o termo de pesquisa
+        if (stripos($obj->name, $searchTerm) !== false) {
+            $searchResultsApi[] = $obj;
+        }
+        // Cria sugestões com base no nome do Pokémon
+        if (stripos($obj->name, $searchTerm) !== false) {
+            $suggestions[] = $obj->name;
         }
     }
 } else {
     // Se não houver pesquisa, mostra todos os Pokémon
-    $searchResults = $pokemons->pokemon;
+    $searchResults = $pokemonsBd;
+    $searchResultsApi = $pokemons->pokemon;
+    
 }
 
 $pokemonCount = count($searchResults);
@@ -177,6 +205,18 @@ $evolutionCount = 0;
         .back-button a:hover {
             background-color: #388e3c;
         }
+
+        .newPoke{
+            border-radius:10px;
+            background-color:#4caf50;
+            color:white;
+            border:none;
+            padding:10px;
+            position:fixed;
+            top:90%;
+            right:5%;
+           
+        }
     </style>
     <script>
         // Função para enviar a solicitação de sugestões com base no que o usuário digita
@@ -210,7 +250,8 @@ $evolutionCount = 0;
             <div id="suggestions"></div>
         </div>
         <?php
-        foreach($searchResults as $Pokemon){
+        
+        foreach($searchResultsApi as $Pokemon){
             echo '<div class="card">';
             echo '<h2>' . $Pokemon->name . '</h2>';
             echo '<div class="types">';
@@ -229,12 +270,34 @@ $evolutionCount = 0;
             }
             echo '</div>';
         }
+        foreach($searchResults as $pokemon) {
+            echo '<div class="card">';
+            echo '<h2>' . $pokemon['nome'] . '</h2>';
+            echo '<div class="types">';
+            foreach (json_decode($pokemon['tipos'],true) as $type) {
+                echo '<p class="type ' . $type . '">' . $type . '</p>';
+            }
+            echo '</div>';
+            echo "<img src='" . $pokemon['img'] . "'> ";
+
+            if (isset($pokemon['NextEvolve'])) {
+                echo '<p><strong>Next Evolutions:</strong></p>';
+                foreach (json_decode($pokemon['NextEvolve'], true) as $evolution) {
+                    echo '<p>' . $evolution . '</p>';
+                    $evolutionCount++;
+                }
+            }
+            echo '</div>';
+        }
         ?>
         <?php if (isset($_GET['search'])): ?>
         <div class="back-button">
             <a href="pokemon.php" class="back-link">Back to All Pokémon</a>
         </div>
         <?php endif; ?>
+    </div>
+    <div>
+        <a href="cadastroPoke.php"><button class="newPoke">Adicionar novo pokemon</button></a>
     </div>
 </body>
 </html>
